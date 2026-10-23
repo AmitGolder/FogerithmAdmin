@@ -46,6 +46,7 @@ type Product = {
   sellingPrice: number;
   bomLines: BomLine[];
 };
+type CalculatorLine = { key: number; partId: number | null; name: string; unit: string; quantity: number; unitCost: number };
 
 type OrderLine = { id: number; orderId: number; productId: number; productCode: string; productName: string; quantity: number };
 type CustomerOrder = { id: number; orderNumber: string; customerName: string; createdAt: string; status: string; lines: OrderLine[] };
@@ -101,6 +102,10 @@ const emptyProduct = (): Partial<Product> => ({
       <button type="button" class="nav"
         [class.active]="section==='products'"
         (click)="go('products')">⬡ &nbsp; Products &amp; BOM</button>
+
+      <button type="button" class="nav"
+        [class.active]="section==='calculator'"
+        (click)="go('calculator')">₹ &nbsp; Price Calculator</button>
 
       <button type="button" class="nav"
         [class.active]="section==='orders'"
@@ -269,6 +274,7 @@ const emptyProduct = (): Partial<Product> => ({
                 <option value="pc">pc</option>
                 <option value="set">set</option>
                 <option value="m">m</option>
+                <option value="ft">ft</option>
                 <option value="kg">kg</option>
                 <option value="g">g</option>
                 <option value="L">L</option>
@@ -615,6 +621,45 @@ const emptyProduct = (): Partial<Product> => ({
         </section>
       </ng-container>
 
+      <!-- PRICE CALCULATOR -->
+      <ng-container *ngIf="section==='calculator'">
+        <section class="panel">
+          <div class="panel-head"><div><h2>Product Price Calculator</h2><p>Calculate an estimated selling price without changing your saved BOM or inventory.</p></div><button type="button" class="secondary" (click)="resetCalculator()">Reset calculation</button></div>
+          <div class="form-grid">
+            <label class="wide">Choose product
+              <select name="calculatorProduct" [(ngModel)]="calculatorProductId" (ngModelChange)="onCalculatorProductChange()">
+                <option [ngValue]="null">Select a product…</option>
+                <option *ngFor="let p of products" [ngValue]="p.id">{{p.code}} — {{p.name}}</option>
+              </select>
+            </label>
+          </div>
+          <div class="empty" *ngIf="!calculatorProductId">Select a product to load its BOM components and current unit costs.</div>
+          <div class="table-wrap" *ngIf="calculatorProductId">
+            <table><thead><tr><th>COMPONENT / PART</th><th>QUANTITY</th><th>UNIT COST (₹)</th><th>LINE COST (₹)</th><th></th></tr></thead>
+              <tbody><tr *ngFor="let line of calculatorLines; let i=index">
+                <td><select class="calculator-select" [name]="'calc-part-' + line.key" [(ngModel)]="line.partId" (ngModelChange)="onCalculatorPartChange(line)"><option [ngValue]="null">Custom component…</option><option *ngFor="let part of parts" [ngValue]="part.id">{{part.code}} — {{part.name}}</option></select><input class="calculator-name" [name]="'calc-name-' + line.key" [(ngModel)]="line.name" placeholder="Component name"><small>{{line.unit || 'unit'}}</small></td>
+                <td><input class="quantity-input" [name]="'calc-qty-' + line.key" type="number" min="0" step="0.0001" [(ngModel)]="line.quantity"></td>
+                <td><input class="quantity-input" [name]="'calc-cost-' + line.key" type="number" min="0" step="0.01" [(ngModel)]="line.unitCost"></td>
+                <td><b>₹{{(numberValue(line.quantity) * numberValue(line.unitCost)) | number:'1.2-2'}}</b></td>
+                <td><button type="button" class="danger" (click)="removeCalculatorLine(i)">Remove</button></td>
+              </tr></tbody>
+            </table>
+          </div>
+          <div class="calculator-actions" *ngIf="calculatorProductId"><button type="button" class="secondary" (click)="addCalculatorLine()">+ Add component</button><span>Changes here apply to this calculation only.</span></div>
+        </section>
+        <section class="panel section-gap" *ngIf="calculatorProductId">
+          <div class="panel-head"><div><h2>Additional costs and profit</h2><p>Enter the amount for one finished product.</p></div></div>
+          <div class="form-grid">
+            <label>Fare (₹)<input name="calcFare" type="number" min="0" step="0.01" [(ngModel)]="calculatorCosts.fare"></label>
+            <label>Wire (₹)<input name="calcWire" type="number" min="0" step="0.01" [(ngModel)]="calculatorCosts.wire"></label>
+            <label>Packaging (₹)<input name="calcPackaging" type="number" min="0" step="0.01" [(ngModel)]="calculatorCosts.packaging"></label>
+            <label>Add / other cost (₹)<input name="calcOther" type="number" min="0" step="0.01" [(ngModel)]="calculatorCosts.other"></label>
+            <label class="wide">Profit — fixed amount (₹)<input name="calcProfit" type="number" min="0" step="0.01" [(ngModel)]="calculatorCosts.profit"></label>
+          </div>
+          <div class="calculator-summary"><div><span>Raw material cost</span><strong>₹{{calculatorRawCost | number:'1.2-2'}}</strong></div><div><span>Additional costs</span><strong>₹{{calculatorAdditionalCost | number:'1.2-2'}}</strong></div><div><span>Profit</span><strong>₹{{numberValue(calculatorCosts.profit) | number:'1.2-2'}}</strong></div><div class="calculator-total"><span>Calculated selling price</span><strong>₹{{calculatorSellingPrice | number:'1.2-2'}}</strong></div><button type="button" class="primary" (click)="copyCalculatorSummary()">Copy price breakdown</button></div>
+        </section>
+      </ng-container>
+
       <!-- CUSTOMER ORDERS -->
       <ng-container *ngIf="section==='orders'">
         <section class="panel">
@@ -778,6 +823,10 @@ export class AppComponent implements OnInit {
   };
 
   selectedProductId: number | null = null;
+  calculatorProductId: number | null = null;
+  calculatorLines: CalculatorLine[] = [];
+  private calculatorLineKey = 0;
+  calculatorCosts = { fare: 0, wire: 0, packaging: 0, other: 0, profit: 0 };
   bomPartId: number | null = null;
   bomQuantity = 1;
 
@@ -791,6 +840,7 @@ export class AppComponent implements OnInit {
       overview: 'Overview',
       inventory: 'Parts & Inventory',
       products: 'Products & BOM',
+      calculator: 'Price Calculator',
       orders: 'Customer Orders',
       production: 'Production',
       purchases: 'Purchases'
@@ -819,6 +869,52 @@ export class AppComponent implements OnInit {
     return this.products.find(p => p.id === Number(this.selectedProductId));
   }
 
+  get calculatorRawCost() {
+    return this.calculatorLines.reduce((sum, line) => sum + this.numberValue(line.quantity) * this.numberValue(line.unitCost), 0);
+  }
+
+  get calculatorAdditionalCost() {
+    return ['fare', 'wire', 'packaging', 'other'].reduce((sum, key) => sum + this.numberValue(this.calculatorCosts[key as keyof typeof this.calculatorCosts]), 0);
+  }
+
+  get calculatorSellingPrice() {
+    return this.calculatorRawCost + this.calculatorAdditionalCost + this.numberValue(this.calculatorCosts.profit);
+  }
+
+  numberValue(value: unknown): number {
+    const n = Number(value);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  }
+
+  onCalculatorProductChange() {
+    const product = this.products.find(p => p.id === Number(this.calculatorProductId));
+    this.calculatorLines = (product?.bomLines || []).map(line => {
+      const part = this.parts.find(p => p.id === line.partId);
+      const apiPart = line.part as Part | undefined;
+      return { key: ++this.calculatorLineKey, partId: line.partId, name: part?.name || apiPart?.name || '', unit: part?.unit || apiPart?.unit || 'pc', quantity: line.quantityPerProduct, unitCost: this.numberValue(part?.unitCost ?? apiPart?.unitCost) };
+    });
+    this.calculatorCosts = { fare: 0, wire: 0, packaging: 0, other: 0, profit: 0 };
+  }
+
+  onCalculatorPartChange(line: CalculatorLine) {
+    const part = this.parts.find(p => p.id === Number(line.partId));
+    if (part) { line.name = part.name; line.unit = part.unit; line.unitCost = this.numberValue(part.unitCost); }
+  }
+
+  addCalculatorLine() {
+    this.calculatorLines.push({ key: ++this.calculatorLineKey, partId: null, name: '', unit: 'pc', quantity: 1, unitCost: 0 });
+  }
+
+  removeCalculatorLine(index: number) { this.calculatorLines.splice(index, 1); }
+
+  resetCalculator() { this.calculatorProductId = null; this.calculatorLines = []; this.calculatorCosts = { fare: 0, wire: 0, packaging: 0, other: 0, profit: 0 }; }
+
+  copyCalculatorSummary() {
+    const product = this.products.find(p => p.id === Number(this.calculatorProductId));
+    const breakdown = [`Product: ${product?.name || 'Custom calculation'}`, ...this.calculatorLines.map(line => `${line.name || 'Component'}: ${line.quantity} × ₹${this.numberValue(line.unitCost).toFixed(2)} = ₹${(this.numberValue(line.quantity) * this.numberValue(line.unitCost)).toFixed(2)}`), `Raw material cost: ₹${this.calculatorRawCost.toFixed(2)}`, `Fare: ₹${this.numberValue(this.calculatorCosts.fare).toFixed(2)}`, `Wire: ₹${this.numberValue(this.calculatorCosts.wire).toFixed(2)}`, `Packaging: ₹${this.numberValue(this.calculatorCosts.packaging).toFixed(2)}`, `Add / other: ₹${this.numberValue(this.calculatorCosts.other).toFixed(2)}`, `Profit: ₹${this.numberValue(this.calculatorCosts.profit).toFixed(2)}`, `Selling price: ₹${this.calculatorSellingPrice.toFixed(2)}`].join('\n');
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) navigator.clipboard.writeText(breakdown).then(() => { this.notice = 'Price breakdown copied.'; this.cdr.markForCheck(); }).catch(() => { this.notice = 'Could not copy automatically. The calculated price is shown above.'; });
+  }
+
   ngOnInit() {
     this.refreshAll();
   }
@@ -828,7 +924,7 @@ export class AppComponent implements OnInit {
     this.error = '';
     this.notice = '';
 
-    if (section === 'products') {
+    if (section === 'products' || section === 'calculator') {
       this.loadParts();
       this.loadProducts();
     }
