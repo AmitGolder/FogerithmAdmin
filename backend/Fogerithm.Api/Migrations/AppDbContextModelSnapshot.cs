@@ -76,6 +76,47 @@ namespace Fogerithm.Api.Migrations
                     b.ToTable("Orders");
                 });
 
+            modelBuilder.Entity("Fogerithm.Api.Models.FinishedGoodsMovement", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("OccurredAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("QuantityIn")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal>("QuantityOut")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<string>("Reference")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.ToTable("FinishedGoodsMovements");
+                });
+
             modelBuilder.Entity("Fogerithm.Api.Models.OrderLine", b =>
                 {
                     b.Property<int>("Id")
@@ -124,14 +165,16 @@ namespace Fogerithm.Api.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("OpeningStock")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<string>("Remarks")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("ReorderLevel")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<string>("Specification")
                         .IsRequired()
@@ -178,6 +221,7 @@ namespace Fogerithm.Api.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("SellingPrice")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.HasKey("Id");
@@ -186,6 +230,89 @@ namespace Fogerithm.Api.Migrations
                         .IsUnique();
 
                     b.ToTable("Products");
+                });
+
+            modelBuilder.Entity("Fogerithm.Api.Models.ProductionConsumption", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("ActualPartId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("ActualQuantity")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<int>("PartId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("PlannedQuantity")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<int>("ProductionRunId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActualPartId");
+
+                    b.HasIndex("PartId");
+
+                    b.HasIndex("ProductionRunId");
+
+                    b.ToTable("ProductionConsumptions");
+                });
+
+            modelBuilder.Entity("Fogerithm.Api.Models.ProductionRun", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("CompletedQuantity")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<int>("OrderId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("PlannedQuantity")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ProductionNumber")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("ProductionNumber")
+                        .IsUnique();
+
+                    b.ToTable("ProductionRuns");
                 });
 
             modelBuilder.Entity("Fogerithm.Api.Models.ReservationLine", b =>
@@ -253,6 +380,7 @@ namespace Fogerithm.Api.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("UnitCost")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.HasKey("Id");
@@ -267,7 +395,7 @@ namespace Fogerithm.Api.Migrations
                     b.HasOne("Fogerithm.Api.Models.Part", "Part")
                         .WithMany()
                         .HasForeignKey("PartId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("Fogerithm.Api.Models.Product", "Product")
@@ -277,6 +405,17 @@ namespace Fogerithm.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Part");
+
+                    b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("Fogerithm.Api.Models.FinishedGoodsMovement", b =>
+                {
+                    b.HasOne("Fogerithm.Api.Models.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.Navigation("Product");
                 });
@@ -292,7 +431,52 @@ namespace Fogerithm.Api.Migrations
                     b.HasOne("Fogerithm.Api.Models.Product", "Product")
                         .WithMany()
                         .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Order");
+
+                    b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("Fogerithm.Api.Models.ProductionConsumption", b =>
+                {
+                    b.HasOne("Fogerithm.Api.Models.Part", "ActualPart")
+                        .WithMany()
+                        .HasForeignKey("ActualPartId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Fogerithm.Api.Models.Part", "Part")
+                        .WithMany()
+                        .HasForeignKey("PartId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Fogerithm.Api.Models.ProductionRun", "ProductionRun")
+                        .WithMany("Consumptions")
+                        .HasForeignKey("ProductionRunId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ActualPart");
+
+                    b.Navigation("Part");
+
+                    b.Navigation("ProductionRun");
+                });
+
+            modelBuilder.Entity("Fogerithm.Api.Models.ProductionRun", b =>
+                {
+                    b.HasOne("Fogerithm.Api.Models.CustomerOrder", "Order")
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Fogerithm.Api.Models.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Order");
@@ -311,7 +495,7 @@ namespace Fogerithm.Api.Migrations
                     b.HasOne("Fogerithm.Api.Models.Part", "Part")
                         .WithMany()
                         .HasForeignKey("PartId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Part");
@@ -324,7 +508,7 @@ namespace Fogerithm.Api.Migrations
                     b.HasOne("Fogerithm.Api.Models.Part", "Part")
                         .WithMany()
                         .HasForeignKey("PartId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Part");
@@ -338,6 +522,11 @@ namespace Fogerithm.Api.Migrations
             modelBuilder.Entity("Fogerithm.Api.Models.Product", b =>
                 {
                     b.Navigation("BomLines");
+                });
+
+            modelBuilder.Entity("Fogerithm.Api.Models.ProductionRun", b =>
+                {
+                    b.Navigation("Consumptions");
                 });
 #pragma warning restore 612, 618
         }

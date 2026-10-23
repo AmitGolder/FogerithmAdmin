@@ -1,3 +1,4 @@
+
 namespace Fogerithm.Api.Models;
 
 public class Part
@@ -49,8 +50,20 @@ public class StockMovement
     public string Notes { get; set; } = "";
 }
 
-public enum OrderStatus { Accepted, InProduction, Completed, Cancelled }
-public enum ReservationStatus { Active, Consumed, Released }
+public enum OrderStatus
+{
+    Accepted,
+    InProduction,
+    Completed,
+    Cancelled
+}
+
+public enum ReservationStatus
+{
+    Active,
+    Consumed,
+    Released
+}
 
 public class CustomerOrder
 {
@@ -80,5 +93,77 @@ public class ReservationLine
     public int PartId { get; set; }
     public Part? Part { get; set; }
     public decimal Quantity { get; set; }
-    public ReservationStatus Status { get; set; } = ReservationStatus.Active;
+    public ReservationStatus Status { get; set; }
+        = ReservationStatus.Active;
+}
+
+// PRODUCTION
+
+public enum ProductionStatus
+{
+    InProgress,
+    Completed,
+    Cancelled
+}
+
+public class ProductionRun
+{
+    public int Id { get; set; }
+
+    public string ProductionNumber { get; set; } = "";
+
+    public int OrderId { get; set; }
+    public CustomerOrder? Order { get; set; }
+
+    public int ProductId { get; set; }
+    public Product? Product { get; set; }
+
+    public decimal PlannedQuantity { get; set; }
+    public decimal CompletedQuantity { get; set; }
+
+    public ProductionStatus Status { get; set; }
+        = ProductionStatus.InProgress;
+
+    public DateTime StartedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? CompletedAt { get; set; }
+
+    public List<ProductionConsumption> Consumptions { get; set; } = [];
+}
+
+public class ProductionConsumption
+{
+    public int Id { get; set; }
+
+    public int ProductionRunId { get; set; }
+    public ProductionRun? ProductionRun { get; set; }
+
+    // Original component required by the product BOM.
+    public int PartId { get; set; }
+    public Part? Part { get; set; }
+
+    // Component actually used during production; null means the original PartId for legacy rows.
+    public int? ActualPartId { get; set; }
+    public Part? ActualPart { get; set; }
+
+    public decimal PlannedQuantity { get; set; }
+    public decimal ActualQuantity { get; set; }
+}
+public class FinishedGoodsMovement
+{
+    public int Id { get; set; }
+
+    public DateTime OccurredAt { get; set; } = DateTime.UtcNow;
+
+    public string Reference { get; set; } = "";
+
+    // Production, Sale, Adjustment, Return
+    public string Type { get; set; } = "";
+
+    public int ProductId { get; set; }
+    public Product? Product { get; set; }
+
+    public decimal QuantityIn { get; set; }
+    public decimal QuantityOut { get; set; }
+
+    public string Notes { get; set; } = "";
 }
